@@ -1,0 +1,89 @@
+{
+  "namespace": "kappademo",
+  "name": "transaction",
+  "type": "record",
+  "fields": [
+    {
+      "name": "merchant_id",
+      "type": {
+        "type": "long",
+        "arg.properties": {
+          "range": {
+            "min": 1,
+            "max": 1000
+          }
+        }
+      }
+    },
+    {
+      "name": "location_id",
+      "type": {
+        "type": "string",
+        "arg.properties": {
+          "regex": "[0-9]"
+        }
+      }
+    },
+    {
+      "name": "terminal_id",
+      "type": {
+        "type": "long",
+        "arg.properties": {
+          "range": {
+            "min": 1,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "name": "payment_scheme",
+      "type": {
+        "type": "string",
+        "arg.properties": {
+          "options": [
+            "WECHAT",
+            "ALIPAY"
+          ]
+        }
+      }
+    },
+    {
+      "name": "transaction_type",
+      "type": {
+        "type": "string",
+        "arg.properties": {
+          "options": [
+            "REFUND",
+            "PURCHASE"
+          ]
+        }
+      }
+    },
+    {
+      "name": "transaction_amount",
+      "type": {
+        "type": "long",
+        "arg.properties": {
+          "range": {
+            "min": 100,
+            "max": 90000
+          }
+        }
+      }
+    },
+    {
+      "name": "terminal_business_day",
+      "type": {
+        "type": "long",
+        "format_as_time": "unix_long",
+        "arg.properties": {
+          "iteration": {
+            "start": 1,
+            "step": 10
+          }
+        }
+      }
+    }
+  ]
+}

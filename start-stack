@@ -1,0 +1,129 @@
+#!/bin/bash
+
+set -e
+
+waitForKafkaConnect() {
+    while true; do
+        if docker-compose -f kafka.yml logs kafka-connect-cp|grep -q "Kafka Connect started"; then
+           echo "Kafka Connect started"
+           break
+        fi
+        echo "Waiting for Kafka Connect to start"
+        sleep 1
+    done
+}
+
+waitForPostgres() {
+    while true; do
+        if docker-compose -f consumers.yml logs postgres|grep -q "database system is ready to accept connections"; then
+           echo "Postgres started"
+           break
+        fi
+        echo "Waiting for Postgres to start"
+        sleep 1
+    done
+}
+
+waitForSink() {
+    while true; do
+        if curl -s "http://localhost:18083/connectors/jdbc-postgres-sink/status"|jq -c -M '[.name,.connector.state,.tasks[].state]|join(":")'|grep -q "jdbc-postgres-sink:RUNNING:RUNNING"; then
+           echo "JDBC Postgres Sink started"
+           break
+        fi
+        echo "Waiting for JDBC Postgres Sink to start"
+        sleep 1
+    done
+}
+
+waitForInputTopic() {
+    while true; do
+        if curl -s "http://localhost:8082/topics/transaction_input"|jq -c -M '.name'|grep -q "transaction_input"; then
+           echo "Input topic created"
+           break
+        fi
+        echo "Waiting for input topic to create"
+        sleep 1
+    done
+}
+
+waitForOutputTopic() {
+    while true; do
+        if curl -s "http://localhost:8082/topics/transaction_output"|jq -c -M '.name'|grep -q "transaction_output"; then
+           echo "Output topic created"
+           break
+        fi
+        echo "Waiting for output topic to create"
+        sleep 1
+    done
+}
+
+waitForSchema() {
+     while true; do
+        if curl -s "http://localhost:8081/subjects/"|jq . |grep -q "transaction_output-value"; then
+           echo "Schema created"
+           break
+        fi
+        echo "Waiting schema to create"
+        sleep 1
+    done
+}
+
+echo '==> Starting Setup <=='
+
+echo '=> Starting Kafka Connect'
+docker-compose -f kafka.yml up -d
+echo '\n'
+waitForKafkaConnect
+
+echo '=> Starting Postgres'
+docker-compose -f consumers.yml up -d
+echo '\n'
+waitForPostgres
+
+
+#echo '\n'
+#echo '=> Waiting for connector topics to be created ...'
+#sleep 5
+echo '=> Postgres connectors configured'
+
+# Set up missing topics
+echo '\n'
+echo '=> Setting up topics'
+docker-compose -f kafka.yml exec broker kafka-topics --create --topic transaction_input --partitions 1 --replication-factor 1 --if-not-exists --zookeeper zookeeper:2181
+echo '\n'
+waitForInputTopic
+
+# Create some schemas we need for the KSQL
+echo '\n'
+echo '=> Setting up schemas'
+#docker-compose -f kafka.yml exec schema-registry bash -c '/scripts/create_transaction_schema.sh'
+curl -X "POST" "http://localhost:8081/subjects/transaction_output-value/versions" -H "Content-Type: application/vnd.schemaregistry.v1+json" -d@./scripts/schema-registry/create_transaction_schema.json
+echo '\n'
+waitForSchema
+echo '=> Schemas done'
+
+# Create the KSQL streams and tables needed for the app
+# Note that the Streams being created for the sink into Postgres are a bit funky because of upper/lowercase columns
+echo '\n'
+echo '=> Create the KSQL Streams and Tables'
+curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_transaction_input_stream.json
+echo '\n'
+waitForInputTopic
+curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_transaction_output_stream.json
+echo '\n'
+waitForOutputTopic
+
+# Set up the connectors for Postgres
+# Note that slot.name cannot contain hyphens
+echo '\n'
+echo '=> Setting up Postgres connectors'
+#docker-compose -f kafka.yml exec kafka-connect-cp bash -c 'scripts/create_postgres_sinks.sh'
+curl -X "POST" "http://localhost:18083/connectors/" -H "Content-Type: application/json; charset=utf-8" -d@./scripts/kafka-connect/create_postgres_sink.json
+echo '\n'
+waitForSink
+
+# Done
+echo '\n'
+echo '==> Done <=='
+
+

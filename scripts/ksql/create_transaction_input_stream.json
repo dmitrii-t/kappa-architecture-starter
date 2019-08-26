@@ -1,0 +1,6 @@
+{
+  "ksql": "CREATE STREAM transaction_input (merchant_id BIGINT, location_id VARCHAR, terminal_id BIGINT, payment_scheme VARCHAR, transaction_type VARCHAR, transaction_amount BIGINT, terminal_business_day BIGINT) WITH (KAFKA_TOPIC='transaction_input', VALUE_FORMAT='JSON');",
+  "streamsProperties": {
+    "ksql.streams.auto.offset.reset": "earliest"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "ksql": "CREATE STREAM location_summary_output WITH (PARTITIONS=1, VALUE_FORMAT='AVRO', KAFKA_TOPIC='location_summary_output') AS SELECT merchant_id as \"merchant_id\", location_id as \"location_id\", terminal_id as \"terminal_id\", payment_scheme as \"payment_scheme\", transaction_type as \"transaction_type\", transaction_amount as \"transaction_amount\", terminal_business_day as \"terminal_business_day\" FROM transaction_input;",
+  "streamsProperties": {
+    "ksql.streams.auto.offset.reset": "earliest"
+  }
+}

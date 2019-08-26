@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker-compose -f dataload.yml -f consumers.yml -f kafka.yml down

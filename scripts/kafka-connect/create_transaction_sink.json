@@ -1,20 +1,25 @@
 {
-  "name": "jdbc-postgres-sink",
+  "name": "jdbc-transaction-sink",
   "config": {
     "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
     "connection.url": "jdbc:postgresql://postgres:5432/kappademo?user=postgres&password=postgres",
-    "auto.create": false,
+    "auto.create": true,
     "auto.evolve": true,
+
     "insert.mode": "insert",
     "mode": "incrementing",
     "table.name.format": "transaction",
     "incrementing.column.name": "id",
+    "topics": "transaction_output",
+    "numeric.mapping": "best_fit",
+
     "key.converter": "org.apache.kafka.connect.storage.StringConverter",
     "key.converter.schemas.enable": "false",
+
     "value.converter": "io.confluent.connect.avro.AvroConverter",
-    "value.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "true",
     "value.converter.schema.registry.url": "http://schema-registry:8081",
-    "topics": "transaction_output",
-    "numeric.mapping": "best_fit"
+
+    "dialect.name": "PostgreSqlDatabaseDialect"
   }
 }

@@ -1,0 +1,6 @@
+{
+  "ksql": "CREATE STREAM transaction_signed WITH (PARTITIONS=1, VALUE_FORMAT='AVRO', KAFKA_TOPIC='transaction_signed') AS SELECT merchant_id, payment_scheme, transaction_type, CASE WHEN transaction_type = 'REFUND' THEN (-1 * transaction_amount) ELSE transaction_amount END AS \"transaction_amount_signed\", terminal_business_day FROM transaction_input;",
+  "streamsProperties": {
+    "ksql.streams.auto.offset.reset": "earliest"
+  }
+}

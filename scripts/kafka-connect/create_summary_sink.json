@@ -1,0 +1,27 @@
+{
+  "name": "jdbc-summary-sink",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+    "connection.url": "jdbc:postgresql://postgres:5432/kappademo?user=postgres&password=postgres",
+    "auto.create": true,
+    "auto.evolve": true,
+
+    "insert.mode": "upsert",
+    "mode": "incrementing",
+    "table.name.format": "summary",
+    "topics": "summary_output",
+    "numeric.mapping": "best_fit",
+
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "key.converter.schemas.enable": "false",
+
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schemas.enable": "true",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+
+    "pk.mode": "record_value",
+    "pk.fields": "MERCHANT_ID,PAYMENT_SCHEME",
+
+    "dialect.name": "PostgreSqlDatabaseDialect"
+  }
+}

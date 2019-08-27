@@ -24,106 +24,124 @@ waitForPostgres() {
     done
 }
 
-waitForSink() {
+waitForConnector() {
+    local connector=$1
     while true; do
-        if curl -s "http://localhost:18083/connectors/jdbc-postgres-sink/status"|jq -c -M '[.name,.connector.state,.tasks[].state]|join(":")'|grep -q "jdbc-postgres-sink:RUNNING:RUNNING"; then
-           echo "JDBC Postgres Sink started"
+        if curl -s "http://localhost:18083/connectors/$connector/status"|jq -c -M '[.name,.connector.state,.tasks[].state]|join(":")'|grep -q "$connector:RUNNING:RUNNING"; then
+           echo "Connector $connector started"
            break
         fi
-        echo "Waiting for JDBC Postgres Sink to start"
+        echo "Waiting for connector $connector to start"
         sleep 1
     done
 }
 
-waitForInputTopic() {
+waitForTopic() {
+    local topic=$1
     while true; do
-        if curl -s "http://localhost:8082/topics/transaction_input"|jq -c -M '.name'|grep -q "transaction_input"; then
-           echo "Input topic created"
+        if curl -s "http://localhost:8082/topics/$topic"|jq -c -M '.name'|grep -q "$topic"; then
+           echo "Topic $topic created"
            break
         fi
-        echo "Waiting for input topic to create"
-        sleep 1
-    done
-}
-
-waitForOutputTopic() {
-    while true; do
-        if curl -s "http://localhost:8082/topics/transaction_output"|jq -c -M '.name'|grep -q "transaction_output"; then
-           echo "Output topic created"
-           break
-        fi
-        echo "Waiting for output topic to create"
+        echo "Waiting for topic $topic to create"
         sleep 1
     done
 }
 
 waitForSchema() {
+     local schema=$1
      while true; do
-        if curl -s "http://localhost:8081/subjects/"|jq . |grep -q "transaction_output-value"; then
-           echo "Schema created"
+        if curl -s "http://localhost:8081/subjects/"|jq . |grep -q "$schema"; then
+           echo "Schema $schema created"
            break
         fi
-        echo "Waiting schema to create"
+        echo "Waiting schema $schema to create"
         sleep 1
     done
 }
 
-echo '==> Starting Setup <=='
+echo '=> Starting Setup'
 
-echo '=> Starting Kafka Connect'
+echo '==> Starting Kafka Connect'
 docker-compose -f kafka.yml up -d
 echo '\n'
 waitForKafkaConnect
 
-echo '=> Starting Postgres'
+echo '==> Starting Postgres'
 docker-compose -f consumers.yml up -d
 echo '\n'
 waitForPostgres
 
-
 #echo '\n'
 #echo '=> Waiting for connector topics to be created ...'
 #sleep 5
-echo '=> Postgres connectors configured'
+echo '==> Postgres connectors configured'
 
-# Set up missing topics
+# Set up Kafka topics
 echo '\n'
-echo '=> Setting up topics'
+echo '==> Setting up topics'
 docker-compose -f kafka.yml exec broker kafka-topics --create --topic transaction_input --partitions 1 --replication-factor 1 --if-not-exists --zookeeper zookeeper:2181
 echo '\n'
-waitForInputTopic
+waitForTopic "transaction_input"
 
 # Create some schemas we need for the KSQL
 echo '\n'
-echo '=> Setting up schemas'
-#docker-compose -f kafka.yml exec schema-registry bash -c '/scripts/create_transaction_schema.sh'
+echo '==> Setting up schemas'
+
+#curl -X "POST" "http://localhost:8081/subjects/transaction_signed-value/versions" -H "Content-Type: application/vnd.schemaregistry.v1+json" -d@./scripts/schema-registry/create_transaction_signed_schema.json
+#echo '\n'
+#waitForSchema "transaction_signed-value"
+
 curl -X "POST" "http://localhost:8081/subjects/transaction_output-value/versions" -H "Content-Type: application/vnd.schemaregistry.v1+json" -d@./scripts/schema-registry/create_transaction_schema.json
 echo '\n'
-waitForSchema
-echo '=> Schemas done'
+waitForSchema "transaction_output-value"
+
+echo '\n'
+curl -X "POST" "http://localhost:8081/subjects/summary_output-value/versions" -H "Content-Type: application/vnd.schemaregistry.v1+json" -d@./scripts/schema-registry/create_summary_schema.json
+echo '\n'
+waitForSchema "summary_output-value"
+
+echo '==> Schemas done'
 
 # Create the KSQL streams and tables needed for the app
 # Note that the Streams being created for the sink into Postgres are a bit funky because of upper/lowercase columns
 echo '\n'
-echo '=> Create the KSQL Streams and Tables'
+echo '==> Create the KSQL streams'
+
+echo '\n'
 curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_transaction_input_stream.json
 echo '\n'
-waitForInputTopic
+waitForTopic "transaction_input"
+
+#curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_transaction_signed_stream.json
+#echo '\n'
+#waitForTopic "transaction_signed"
+
+echo '\n'
 curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_transaction_output_stream.json
 echo '\n'
-waitForOutputTopic
+waitForTopic "transaction_output"
+
+echo '\n'
+curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_summary_output_stream.json
+echo '\n'
+waitForTopic "summary_output"
 
 # Set up the connectors for Postgres
 # Note that slot.name cannot contain hyphens
 echo '\n'
-echo '=> Setting up Postgres connectors'
-#docker-compose -f kafka.yml exec kafka-connect-cp bash -c 'scripts/create_postgres_sinks.sh'
-curl -X "POST" "http://localhost:18083/connectors/" -H "Content-Type: application/json; charset=utf-8" -d@./scripts/kafka-connect/create_postgres_sink.json
+echo '==> Setting up Postgres connectors'
+
+curl -X "POST" "http://localhost:18083/connectors/" -H "Content-Type: application/json; charset=utf-8" -d@./scripts/kafka-connect/create_transaction_sink.json
 echo '\n'
-waitForSink
+waitForConnector 'jdbc-transaction-sink'
+
+curl -X "POST" "http://localhost:18083/connectors/" -H "Content-Type: application/json; charset=utf-8" -d@./scripts/kafka-connect/create_summary_sink.json
+echo '\n'
+waitForConnector 'jdbc-summary-sink'
 
 # Done
 echo '\n'
-echo '==> Done <=='
+echo '=> Done'
 
 

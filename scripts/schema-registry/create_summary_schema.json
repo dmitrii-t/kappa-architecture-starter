@@ -1,0 +1,3 @@
+{
+  "schema": "{\"type\":\"record\",\"name\":\"KsqlDataSourceSchema\",\"namespace\":\"io.confluent.ksql.avro_schemas\",\"fields\": [{\"name\": \"merchant_id\",\"type\": [\"null\",\"long\"],\"default\": null},{\"name\": \"payment_scheme\",\"type\": [\"null\",\"string\"],\"default\": null},{\"name\": \"purchases_total\",\"type\": [\"null\",\"long\"],\"default\": null}]}"
+}

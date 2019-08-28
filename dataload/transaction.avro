@@ -59,7 +59,7 @@
         "arg.properties": {
           "iteration": {
             "start": 1,
-            "step": 10
+            "step": 3600000
           }
         }
       }

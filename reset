@@ -1,0 +1,20 @@
+#!/bin/bash
+
+echo "=> Dropping Postgres tables"
+docker-compose -f consumers.yml exec -T postgres psql -d kappademo -U postgres -w <<EOF
+-- SQL goes below --
+TRUNCATE summary, transaction;
+SELECT 'transaction count', count(*) FROM transaction;
+SELECT 'summary count', count(*) FROM summary;
+EOF
+
+echo "=> Resetting app"
+docker-compose -f kafka.yml exec kafka-connect-cp kafka-streams-application-reset \
+ --application-id default_ \
+ --bootstrap-servers broker:9092 \
+ --zookeeper zookeeper:2181 \
+ --input-topics transaction_input \
+ --intermediate-topics summary transaction_signed
+
+#echo "=> Stopping streams"
+#docker-compose -f kafka.yml restart

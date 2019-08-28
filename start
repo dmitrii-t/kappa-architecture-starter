@@ -60,8 +60,6 @@ waitForSchema() {
     done
 }
 
-echo '=> Setting up environment'
-
 echo '==> Starting Kafka Connect'
 docker-compose -f kafka.yml up -d
 echo ''

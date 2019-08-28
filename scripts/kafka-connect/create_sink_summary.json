@@ -9,7 +9,7 @@
     "insert.mode": "upsert",
     "mode": "incrementing",
     "table.name.format": "summary",
-    "topics": "summary_output",
+    "topics": "summary",
     "numeric.mapping": "best_fit",
 
     "key.converter": "org.apache.kafka.connect.storage.StringConverter",

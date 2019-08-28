@@ -1,6 +1,0 @@
-{
-  "ksql": "CREATE TABLE summary_output WITH (PARTITIONS=1, VALUE_FORMAT='AVRO', KAFKA_TOPIC='summary_output') AS SELECT merchant_id, payment_scheme, SUM(transaction_amount) as \"purchases_total\" FROM transaction_input WINDOW HOPPING (SIZE 30 HOURS, ADVANCE BY 24 HOURS) GROUP BY merchant_id, payment_scheme;",
-  "streamsProperties": {
-    "ksql.streams.auto.offset.reset": "earliest"
-  }
-}

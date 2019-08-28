@@ -60,88 +60,91 @@ waitForSchema() {
     done
 }
 
-echo '=> Starting Setup'
+echo '=> Setting up environment'
 
 echo '==> Starting Kafka Connect'
 docker-compose -f kafka.yml up -d
-echo '\n'
+echo ''
 waitForKafkaConnect
 
 echo '==> Starting Postgres'
 docker-compose -f consumers.yml up -d
-echo '\n'
+echo ''
 waitForPostgres
 
-#echo '\n'
+#echo ''
 #echo '=> Waiting for connector topics to be created ...'
 #sleep 5
 echo '==> Postgres connectors configured'
 
 # Set up Kafka topics
-echo '\n'
+echo ''
 echo '==> Setting up topics'
 docker-compose -f kafka.yml exec broker kafka-topics --create --topic transaction_input --partitions 1 --replication-factor 1 --if-not-exists --zookeeper zookeeper:2181
-echo '\n'
+echo ''
 waitForTopic "transaction_input"
 
 # Create some schemas we need for the KSQL
-echo '\n'
+echo ''
 echo '==> Setting up schemas'
 
-#curl -X "POST" "http://localhost:8081/subjects/transaction_signed-value/versions" -H "Content-Type: application/vnd.schemaregistry.v1+json" -d@./scripts/schema-registry/create_transaction_signed_schema.json
-#echo '\n'
-#waitForSchema "transaction_signed-value"
+curl -X "POST" "http://localhost:8081/subjects/transaction_signed-value/versions" -H "Content-Type: application/vnd.schemaregistry.v1+json" -d@./scripts/schema-registry/create_schema_transaction_signed.json
+echo ''
+waitForSchema "transaction_signed-value"
 
-curl -X "POST" "http://localhost:8081/subjects/transaction_output-value/versions" -H "Content-Type: application/vnd.schemaregistry.v1+json" -d@./scripts/schema-registry/create_transaction_schema.json
-echo '\n'
-waitForSchema "transaction_output-value"
-
-echo '\n'
-curl -X "POST" "http://localhost:8081/subjects/summary_output-value/versions" -H "Content-Type: application/vnd.schemaregistry.v1+json" -d@./scripts/schema-registry/create_summary_schema.json
-echo '\n'
-waitForSchema "summary_output-value"
+echo ''
+curl -X "POST" "http://localhost:8081/subjects/summary-value/versions" -H "Content-Type: application/vnd.schemaregistry.v1+json" -d@./scripts/schema-registry/create_schema_summary.json
+echo ''
+waitForSchema "summary-value"
 
 echo '==> Schemas done'
 
 # Create the KSQL streams and tables needed for the app
 # Note that the Streams being created for the sink into Postgres are a bit funky because of upper/lowercase columns
-echo '\n'
+echo ''
 echo '==> Create the KSQL streams'
 
-echo '\n'
-curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_transaction_input_stream.json
-echo '\n'
+echo ''
+curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_stream_transaction_input.json
+echo ''
 waitForTopic "transaction_input"
 
-#curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_transaction_signed_stream.json
-#echo '\n'
-#waitForTopic "transaction_signed"
+echo ''
+curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_stream_transaction_signed.json
+echo ''
+waitForTopic "transaction_signed"
 
-echo '\n'
-curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_transaction_output_stream.json
-echo '\n'
-waitForTopic "transaction_output"
-
-echo '\n'
-curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_summary_output_stream.json
-echo '\n'
-waitForTopic "summary_output"
+echo ''
+curl -X "POST" "http://localhost:8088/ksql" -H "Content-Type: application/vnd.ksql.v1+json; charset=utf-8" -d@./scripts/ksql/create_stream_summary.json
+echo ''
+waitForTopic "summary"
 
 # Set up the connectors for Postgres
 # Note that slot.name cannot contain hyphens
-echo '\n'
+echo ''
 echo '==> Setting up Postgres connectors'
 
-curl -X "POST" "http://localhost:18083/connectors/" -H "Content-Type: application/json; charset=utf-8" -d@./scripts/kafka-connect/create_transaction_sink.json
-echo '\n'
+curl -X "POST" "http://localhost:18083/connectors/" -H "Content-Type: application/json; charset=utf-8" -d@./scripts/kafka-connect/create_sink_transaction.json
+echo ''
 waitForConnector 'jdbc-transaction-sink'
 
-curl -X "POST" "http://localhost:18083/connectors/" -H "Content-Type: application/json; charset=utf-8" -d@./scripts/kafka-connect/create_summary_sink.json
-echo '\n'
+curl -X "POST" "http://localhost:18083/connectors/" -H "Content-Type: application/json; charset=utf-8" -d@./scripts/kafka-connect/create_sink_summary.json
+echo ''
 waitForConnector 'jdbc-summary-sink'
 
-# Done
-echo '\n'
-echo '=> Done'
+# Setup completed
+echo ''
+echo '==> Setup completed'
 
+# Runs dataload
+dataload_timeout=5
+echo "==> Running Dataload for ${dataload_timeout}sec"
+./start-dataload
+sleep "$dataload_timeout"
+echo "Stopping dataload"
+./stop-dataload 2> /dev/null
+
+# Done
+echo ''
+echo '=> Done'
 

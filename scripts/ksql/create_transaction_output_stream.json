@@ -1,6 +1,0 @@
-{
-  "ksql": "CREATE STREAM transaction_output WITH (PARTITIONS=1, VALUE_FORMAT='AVRO', KAFKA_TOPIC='transaction_output') AS SELECT merchant_id, payment_scheme, transaction_type, transaction_amount, terminal_business_day FROM transaction_input;",
-  "streamsProperties": {
-    "ksql.streams.auto.offset.reset": "earliest"
-  }
-}

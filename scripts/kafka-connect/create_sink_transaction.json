@@ -10,7 +10,7 @@
     "mode": "incrementing",
     "table.name.format": "transaction",
     "incrementing.column.name": "id",
-    "topics": "transaction_output",
+    "topics": "transaction_signed",
     "numeric.mapping": "best_fit",
 
     "key.converter": "org.apache.kafka.connect.storage.StringConverter",

@@ -1,0 +1,35 @@
+FROM alpine as build
+
+WORKDIR /usr/build
+
+ADD https://github.com/Mongey/terraform-provider-kafka/releases/download/v0.2.4/terraform-provider-kafka_0.2.4_linux_amd64.tar.gz \
+    /usr/build/terraform-provider-kafka.tar.gz
+
+ADD https://github.com/Mongey/terraform-provider-kafka-connect/releases/download/v0.2.0/terraform-provider-kafka-connect_0.2.0_linux_amd64.tar.gz \
+    /usr/build/terraform-provider-kafka-connect.tar.gz
+
+ADD https://github.com/Mongey/terraform-provider-ksql/releases/download/v0.0.2/terraform-provider-ksql_0.0.2_linux_amd64.tar.gz \
+    /usr/build/terraform-provider-ksql.tar.gz
+
+
+FROM hashicorp/terraform:light
+
+COPY --from=build \
+    /usr/build/terraform-provider-kafka.tar.gz \
+    /usr/build/terraform-provider-kafka-connect.tar.gz \
+    /usr/build/terraform-provider-ksql.tar.gz \
+    /usr/tf/zip/
+
+WORKDIR /usr/tf/plugin/
+
+RUN tar -zxf /usr/tf/zip/terraform-provider-kafka.tar.gz \
+    && tar -zxf /usr/tf/zip/terraform-provider-kafka-connect.tar.gz \
+    && tar -zxf /usr/tf/zip/terraform-provider-ksql.tar.gz \
+    -C /usr/tf/plugin/
+
+WORKDIR /usr/
+
+COPY ./entrypoint.sh /usr/
+COPY ./main.tf /usr/
+
+ENTRYPOINT ["sh", "/usr/entrypoint.sh"]

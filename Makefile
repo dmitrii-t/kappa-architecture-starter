@@ -1,4 +1,14 @@
-COMPOSE_FILES=-f ./consumers.yml -f ./kafka.yml -f dataload.yml
+COMPOSE_FILES=-f database.yml -f infra.yml -f dataload.yml
+
+ifeq (build,$(firstword $(MAKECMDGOALS)))
+  # use the rest as arguments for "run"
+  BUILD_SERVICES := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  # ...and turn them into do-nothing targets
+  $(eval $(BUILD_SERVICES):;@:)
+endif
+.PHONY: build
+build:
+	docker-compose $(COMPOSE_FILES) build --no-cache $(BUILD_SERVICES)
 
 ifeq (pull,$(firstword $(MAKECMDGOALS)))
   # use the rest as arguments for "run"
@@ -40,6 +50,22 @@ endif
 logs:
 	docker-compose $(COMPOSE_FILES) logs -f $(LOGS_SERVICES)
 
-.PHONY: tf
-tf:
-	(cd ./terraform; terraform plan -out plan && terraform apply plan; cd ~;)
+ifeq (sh,$(firstword $(MAKECMDGOALS)))
+  # use the rest as arguments for "run"
+  SH_SERVICES := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  # ...and turn them into do-nothing targets
+  $(eval $(SH_SERVICES):;@:)
+endif
+.PHONY: sh
+sh:
+	docker-compose $(COMPOSE_FILES) exec $(SH_SERVICES) sh
+
+ifeq (run,$(firstword $(MAKECMDGOALS)))
+  # use the rest as arguments for "run"
+  RUN_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  # ...and turn them into do-nothing targets
+  $(eval $(RUN_ARGS):;@:)
+endif
+.PHONY: run
+run:
+	docker-compose $(COMPOSE_FILES) run $(RUN_ARGS)

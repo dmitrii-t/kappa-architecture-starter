@@ -12,7 +12,9 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
 
   broker:
-    image: confluentinc/cp-enterprise-kafka:5.3.0
+    build:
+      context: .
+      dockerfile: Dockerfile.kafka
     hostname: broker
     container_name: broker
     depends_on:
@@ -22,18 +24,6 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-  #      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
-  #      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
-  #      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:9092
-  #      CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: zookeeper:2181
-  #      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
-  #      CONFLUENT_METRICS_ENABLE: 'true'
-  #      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
 
   schema-registry:
     image: confluentinc/cp-schema-registry:5.3.0
@@ -47,8 +37,6 @@ services:
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
-#    volumes:
-#    - $PWD/scripts:/scripts
 
   control-center:
     image: confluentinc/cp-enterprise-control-center:5.3.0
@@ -137,8 +125,6 @@ services:
     - zookeeper
     - broker
     - schema-registry
-#    volumes:
-#    - $PWD/scripts/kafka-connect:/scripts
 
   rest-proxy:
     image: confluentinc/cp-kafka-rest:latest
@@ -156,10 +142,13 @@ services:
       KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
       KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
 
-    provisioning:
-      build:
-        context: ./provisioning
-        dockerfile: Dockerfile.provisioning
+  provisioning:
+    depends_on:
+    - broker
+    build:
+      context: .
+      dockerfile: Dockerfile.provisioning
+    restart: on-failure
 
 volumes:
   mi2: {}

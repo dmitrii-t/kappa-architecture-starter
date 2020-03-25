@@ -29,7 +29,9 @@ RUN tar -zxf /usr/tf/zip/terraform-provider-kafka.tar.gz \
 
 WORKDIR /usr/
 
-COPY ./entrypoint.sh /usr/
-COPY ./main.tf /usr/
+COPY secrets/ /usr/secrets
+
+COPY docker/provisioning/entrypoint.sh /usr/
+COPY docker/provisioning/main.tf /usr/
 
 ENTRYPOINT ["sh", "/usr/entrypoint.sh"]

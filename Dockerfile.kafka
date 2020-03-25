@@ -1,9 +1,7 @@
-FROM confluentinc/cp-kafka:5.0.1
+FROM confluentinc/cp-enterprise-kafka:5.3.0
 
 COPY secrets/ /etc/kafka/secrets
 
-ENV KAFKA_ADVERTISED_LISTENERS=SSL://localhost:9092
-ENV KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
 ENV KAFKA_SSL_KEYSTORE_FILENAME=kafka.broker1.keystore.jks
 ENV KAFKA_SSL_KEYSTORE_CREDENTIALS=broker1_keystore_creds
 ENV KAFKA_SSL_KEY_CREDENTIALS=broker1_sslkey_creds

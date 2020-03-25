@@ -1,6 +1,7 @@
 ---
 version: '3.5'
 services:
+
   zookeeper:
     image: confluentinc/cp-zookeeper:5.3.0
     hostname: zookeeper
@@ -13,13 +14,14 @@ services:
 
   broker:
     image: confluentinc/cp-enterprise-kafka:5.3.0
+    build:
+      context: .
+      dockerfile: Dockerfile.kafka
     depends_on:
     - zookeeper
     ports:
     - "9092:9092"
     - "29092:9092"
-    volumes:
-    - ./secrets:/etc/kafka/secrets
     networks:
       default:
         aliases:
@@ -28,49 +30,25 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-#      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-
       KAFKA_ADVERTISED_LISTENERS: SSL://localhost:9092,PROVISION://broker:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SSL:SSL,PROVISION:SSL
+
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_SSL_KEYSTORE_FILENAME: kafka.broker1.keystore.jks
-      KAFKA_SSL_KEYSTORE_CREDENTIALS: broker1_keystore_creds
-      KAFKA_SSL_KEY_CREDENTIALS: broker1_sslkey_creds
-      KAFKA_SSL_TRUSTSTORE_FILENAME: kafka.broker1.truststore.jks
-      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: broker1_truststore_creds
-      KAFKA_SECURITY_INTER_BROKER_PROTOCOL: SSL
-      KAFKA_SSL_CLIENT_AUTH: required
-      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM:
-      KAFKA_LISTENER_NAME_INTERNAL_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM:
-      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
-      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.auth.SimpleAclAuthorizer
-
-  #      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
-  #      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-
-  #      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:9092
-  #      CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: zookeeper:2181
-  #      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
-  #      CONFLUENT_METRICS_ENABLE: 'true'
-  #      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+#      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+#      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:9092
+#      CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: zookeeper:2181
+#      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+#      CONFLUENT_METRICS_ENABLE: 'true'
+#      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
 
   provision:
-    restart: on-failure
+    build:
+      context: .
+      dockerfile: Dockerfile.provisioning
     depends_on:
     - broker
-    build:
-      context: docker/provisioning
-      dockerfile: Dockerfile.provisioning
-    volumes:
-    - ./secrets:/usr/secrets
 
-
-#
-#
-#
 #  schema-registry:
 #    image: confluentinc/cp-schema-registry:5.3.0
 #    hostname: schema-registry
@@ -85,7 +63,7 @@ services:
 #      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
 #  #    volumes:
 #  #    - $PWD/scripts:/scripts
-#
+
 #  control-center:
 #    image: confluentinc/cp-enterprise-control-center:5.3.0
 #    hostname: control-center
@@ -101,7 +79,7 @@ services:
 #    environment:
 #      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:9092'
 #      CONTROL_CENTER_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-#      #      CONTROL_CENTER_CONNECT_CLUSTER: ':8083'
+#      # CONTROL_CENTER_CONNECT_CLUSTER: ':8083'
 #      CONTROL_CENTER_KSQL_URL: "http://ksql-server:8088"
 #      CONTROL_CENTER_KSQL_ADVERTISED_URL: "http://localhost:8088"
 #      CONTROL_CENTER_REPLICATION_FACTOR: 1
@@ -109,7 +87,7 @@ services:
 #      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
 #      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
 #      PORT: 9021
-#
+
 #  ksql-server:
 #    image: confluentinc/cp-ksql-server:5.3.0
 #    hostname: ksql-server

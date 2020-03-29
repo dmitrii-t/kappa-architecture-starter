@@ -1,15 +1,15 @@
 FROM alpine as build
 
-WORKDIR /usr/build
+WORKDIR /usr/build/zip/
 
 ADD https://github.com/Mongey/terraform-provider-kafka/releases/download/v0.2.4/terraform-provider-kafka_0.2.4_linux_amd64.tar.gz \
-    /usr/build/terraform-provider-kafka.tar.gz
+    /usr/build/zip/terraform-provider-kafka_0.2.4_linux_amd64.tar.gz
 
-ADD https://github.com/Mongey/terraform-provider-kafka-connect/releases/download/v0.2.1/terraform-provider-kafka-connect_0.2.1_linux_arm64.tar.gz \
-    /usr/build/terraform-provider-kafka-connect.tar.gz
+ADD https://github.com/Mongey/terraform-provider-kafka-connect/releases/download/v0.2.1/terraform-provider-kafka-connect_0.2.1_linux_amd64.tar.gz \
+    /usr/build/zip/terraform-provider-kafka-connect_0.2.1_linux_amd64.tar.gz
 
 ADD https://github.com/Mongey/terraform-provider-ksql/releases/download/v0.0.2/terraform-provider-ksql_0.0.2_linux_amd64.tar.gz \
-    /usr/build/terraform-provider-ksql.tar.gz
+    /usr/build/zip/terraform-provider-ksql_0.0.2_linux_amd64.tar.gz
 
 
 FROM hashicorp/terraform:light
@@ -18,21 +18,14 @@ RUN addgroup -g 1234 tf && adduser -S -u 1234 -G tf tf
 
 WORKDIR /home/tf
 
-COPY --from=build \
-    /usr/build/terraform-provider-kafka.tar.gz \
-    /usr/build/terraform-provider-kafka-connect.tar.gz \
-    /usr/build/terraform-provider-ksql.tar.gz \
-    /home/tf/zip/
-
-RUN mkdir -p /home/tf/.terraform.d/plugins/linux_amd64/ \
-    && tar -zxf /home/tf/zip/terraform-provider-kafka.tar.gz -C /home/tf/.terraform.d/plugins/linux_amd64/ \
-    && tar -zxf /home/tf/zip/terraform-provider-kafka-connect.tar.gz -C /home/tf/.terraform.d/plugins/linux_amd64/ \
-    && tar -zxf /home/tf/zip/terraform-provider-ksql.tar.gz -C /home/tf/.terraform.d/plugins/linux_amd64/
-
+COPY --from=build /usr/build/ /home/tf/
+COPY docker/provisioning/ /home/tf/
 COPY secrets/ /home/tf/secrets
 
-COPY docker/provisioning/entrypoint.sh /home/tf/
-COPY docker/provisioning/main.tf /home/tf/
+RUN mkdir -p /home/tf/.terraform.d/plugins/linux_amd64/ \
+    && tar -zxf /home/tf/zip/terraform-provider-kafka_0.2.4_linux_amd64.tar.gz -C /home/tf/.terraform.d/plugins/linux_amd64/ \
+    && tar -zxf /home/tf/zip/terraform-provider-kafka-connect_0.2.1_linux_amd64.tar.gz -C /home/tf/.terraform.d/plugins/linux_amd64/ \
+    && tar -zxf /home/tf/zip/terraform-provider-ksql_0.0.2_linux_amd64.tar.gz -C /home/tf/.terraform.d/plugins/linux_amd64/
 
 USER tf
 

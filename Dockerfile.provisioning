@@ -5,7 +5,7 @@ WORKDIR /usr/build
 ADD https://github.com/Mongey/terraform-provider-kafka/releases/download/v0.2.4/terraform-provider-kafka_0.2.4_linux_amd64.tar.gz \
     /usr/build/terraform-provider-kafka.tar.gz
 
-ADD https://github.com/Mongey/terraform-provider-kafka-connect/releases/download/v0.2.0/terraform-provider-kafka-connect_0.2.0_linux_amd64.tar.gz \
+ADD https://github.com/Mongey/terraform-provider-kafka-connect/releases/download/v0.2.1/terraform-provider-kafka-connect_0.2.1_linux_arm64.tar.gz \
     /usr/build/terraform-provider-kafka-connect.tar.gz
 
 ADD https://github.com/Mongey/terraform-provider-ksql/releases/download/v0.0.2/terraform-provider-ksql_0.0.2_linux_amd64.tar.gz \
@@ -14,24 +14,26 @@ ADD https://github.com/Mongey/terraform-provider-ksql/releases/download/v0.0.2/t
 
 FROM hashicorp/terraform:light
 
+RUN addgroup -g 1234 tf && adduser -S -u 1234 -G tf tf
+
+WORKDIR /home/tf
+
 COPY --from=build \
     /usr/build/terraform-provider-kafka.tar.gz \
     /usr/build/terraform-provider-kafka-connect.tar.gz \
     /usr/build/terraform-provider-ksql.tar.gz \
-    /usr/tf/zip/
+    /home/tf/zip/
 
-WORKDIR /usr/tf/plugin/
+RUN mkdir -p /home/tf/.terraform.d/plugins/linux_amd64/ \
+    && tar -zxf /home/tf/zip/terraform-provider-kafka.tar.gz -C /home/tf/.terraform.d/plugins/linux_amd64/ \
+    && tar -zxf /home/tf/zip/terraform-provider-kafka-connect.tar.gz -C /home/tf/.terraform.d/plugins/linux_amd64/ \
+    && tar -zxf /home/tf/zip/terraform-provider-ksql.tar.gz -C /home/tf/.terraform.d/plugins/linux_amd64/
 
-RUN tar -zxf /usr/tf/zip/terraform-provider-kafka.tar.gz \
-    && tar -zxf /usr/tf/zip/terraform-provider-kafka-connect.tar.gz \
-    && tar -zxf /usr/tf/zip/terraform-provider-ksql.tar.gz \
-    -C /usr/tf/plugin/
+COPY secrets/ /home/tf/secrets
 
-WORKDIR /usr/
+COPY docker/provisioning/entrypoint.sh /home/tf/
+COPY docker/provisioning/main.tf /home/tf/
 
-COPY secrets/ /usr/secrets
+USER tf
 
-COPY docker/provisioning/entrypoint.sh /usr/
-COPY docker/provisioning/main.tf /usr/
-
-ENTRYPOINT ["sh", "/usr/entrypoint.sh"]
+ENTRYPOINT ["sh", "/home/tf/entrypoint.sh"]

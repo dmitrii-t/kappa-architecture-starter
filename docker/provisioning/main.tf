@@ -1,15 +1,15 @@
 provider "kafka" {
-  bootstrap_servers = ["broker:29092"]
+  bootstrap_servers = ["${var.kafka_url}"]
 
-  ca_cert     = file("/home/tf/secrets/snakeoil-ca-1.crt")
-  client_cert = file("/home/tf/secrets/kafkacat-ca1-signed.pem")
-  client_key  = file("/home/tf/secrets/kafkacat-raw-private-key.pem")
+  ca_cert     = file("${var.ca_cert}")
+  client_cert = file("${var.client_cert}")
+  client_key  = file("${var.client_key}")
   tls_enabled = true
   skip_tls_verify = true
 }
 
 provider "kafka-connect" {
-  url = "http://kafka-connect-cp:18083"
+  url = "http://${var.kafka_connect_url}"
 }
 
 //provider "ksql" {
@@ -61,4 +61,12 @@ resource "kafka-connect_connector" "jdbc-summary-sink" {
 //  "connection.password" = "this-should-never-appear-unmasked"
 //  }
 
+}
+
+output "kafka_url" {
+  value = "${var.kafka_url}"
+}
+
+output "kafka_connect_url" {
+  value = "${var.kafka_connect_url}"
 }
